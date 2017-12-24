@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<title>Meetup RSVPs</title>
+<!-- Copyright � 2017 Michael Schade, http://mvjantzen.com/ -->
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+<base target="_blank">
+<style>
+body {
+  color: white;
+  background: #C51E25;
+  }
+blockquote, body, dd, p, td, li, th, div {
+  font-family: sans-serif;
+  font-size: 12px;
+  }
+tr:hover td:last-child {
+  border-color: #FFFF00;
+  }
+td {
+  border: 1px solid transparent;
+  padding: 1px 10px;
+  vertical-align: top;
+  transition: border-color 0.5s;
+  }
+.bigger {
+  font-size: 24px;
+}
+a {
+  color: #FFFFFF;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+#title {
+  font-size: 30px;
+  margin-bottom: 24px;
+  }
+#center {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  }
+</style>
+<script>
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-24842081-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+</script>
+<script>
+var urlname;
+var eventID;
+
+function dateStr(milliseconds) {
+  var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  var d = new Date(milliseconds);
+  return months[d.getMonth()] + " " + d.getDate() + ", " + d.getFullYear();
+}
+
+function postRSVPs(jsonstr) {
+  var title = document.getElementById('title');
+  var json;
+  try {
+    json = JSON.parse(jsonstr);
+    }
+  catch(e) {
+    title.innerHTML = e;
+    return;
+    }
+  if (json.errors) {
+    title.innerHTML = json.errors[0].message;
+    return;
+  }
+  if (!json.length || json.length == 0) {
+    title.innerHTML = "No data found";
+    return;
+  }
+  if (!json[0].group || !json[0].event) {
+    title.innerHTML = "Bad data returned";
+    return;
+  }
+  var imgStr;
+  var member;
+  group = json[0].group;  // assume [0] is the same as the others (dumb API!)
+  event = json[0].event;
+  var bodyContent = "<table>";
+  var yeses = 0;
+  for (var i = 0; i < json.length; i++) {
+    if (json[i].response == "yes") {
+      var member = json[i].member;
+      if (member.photo && member.photo.thumb_link) {
+        if (member.bio) {
+          bio = member.bio.replace(/'/g, "&#39;");
+        }
+        else {
+          bio = member.name;
+        }
+        imgStr = "<img src='" + member.photo.thumb_link + "' title='" + bio + "'>";
+      }
+      else {
+        imgStr = "";
+      }
+      var linkedName = "<a href='https://www.meetup.com/" + urlname + "/members/" + member.id + "/'>" + member.name + "</a>";
+      bodyContent += "<tr><td align='right'>" + imgStr + "</td><td><span class='bigger'>" + linkedName + "</span><br>" + dateStr(json[i].created) + "</td></tr>";
+      yeses++;
+      }
+    }
+  var nos = json.length - yeses;
+  var meetupName = "<a href='https://www.meetup.com/" + urlname + "/'>" + group.name + "</a>";
+  var eventName = "<a href='https://www.meetup.com/" + urlname + "/events/" + eventID + "/'>" + event.name + "</a>";
+  title.innerHTML = meetupName + "<br>" + eventName + "<br>" + dateStr(event.time) + ": " + yeses + " yes, " + nos + " no";
+  bodyContent += "</table>";
+  var main = document.getElementById('main');
+  main.innerHTML = bodyContent;
+  }
+
+function getRSVPs() {
+  var url = "http://mvjantzen.com/tools/meetup/getrsvps.php?group=" + urlname + "&event=" + eventID;
+  var xmlhttp = new XMLHttpRequest();
+  xmlhttp.open("GET", url);
+  xmlhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {postRSVPs(xmlhttp.responseText)}
+    };
+  xmlhttp.send();
+  }
+
+function parameter(name) {
+  queryStr = window.location.href.substring(window.location.href.indexOf('?') + 1).split("&");
+  for (var i = 0; i < queryStr.length; i++) {
+    eqPos = queryStr[i].indexOf('=');
+    if (eqPos >= 0) {
+      if (queryStr[i].substring(0, eqPos) == name)
+        return queryStr[i].substring(eqPos + 1);
+      }
+    else if (queryStr[i] == name)
+      return "";
+    }
+  return null;
+  }
+
+function initialize() {
+  urlname = parameter("group");
+  eventID = parameter("event");
+  if (!urlname) {
+    urlname = "Transportation-Techies";
+    }
+  var title = document.getElementById('title');
+  title.innerHTML = "Group: " + urlname + "<br>Event: " + eventID;
+  getRSVPs();
+  }
+</script>
+</head>
+<body onload="initialize()">
+<div id=center >
+  <div id=title >Meetup<br>Event</div>
+  <div id=main >
+    <i>Getting RSVPS...</i>
+  </div>
+</div>
+</body>
+</html>
